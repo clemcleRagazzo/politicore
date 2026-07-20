@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Politicore.Models;
 
 namespace Politicore.Dtos
@@ -23,7 +24,7 @@ namespace Politicore.Dtos
                 LastName = user.LastName,
                 DateOfBirth = user.DateOfBirth,
                 PoliticalOrientation = user.PoliticalOrientation,
-                Parties = new List<string>(user.Parties)
+                Parties = user.Parties?.Select(p => p.Name).ToList() ?? new List<string>()
             };
         }
 
@@ -36,7 +37,8 @@ namespace Politicore.Dtos
                 LastName = LastName,
                 DateOfBirth = DateOfBirth,
                 PoliticalOrientation = PoliticalOrientation,
-                Parties = new List<string>(Parties)
+                // Parties mapping is handled in the controller to resolve existing Party entities
+                Parties = new List<Party>()
             };
         }
 

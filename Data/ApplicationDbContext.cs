@@ -13,6 +13,7 @@ namespace Politicore.Data
         }
 
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<Party> Parties { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,7 +22,7 @@ namespace Politicore.Data
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>()
             );
 
-            modelBuilder.Entity<User>().Property(u => u.Parties).HasConversion(listToStringConverter);
+            // Parties converted to a proper many-to-many relation now; remove JSON conversion
 
             var dateOnlyConverter = new ValueConverter<DateOnly, DateTime>(
                 v => v.ToDateTime(TimeOnly.MinValue),

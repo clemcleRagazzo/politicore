@@ -1,0 +1,60 @@
+@page "/Partis"
+@model Politicore.Pages.PartisModel
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profils politiques</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);color:var(--muted)}
+    thead th{color:white}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="brand" href="/">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-weight:800;color:white">Politicore</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65)">Gestion politique simplifiée</div>
+        </div>
+      </a>
+      <nav>
+        <a href="/parties.html">Partis</a>
+        <a href="/swagger">API</a>
+        <a href="/register.html">Créer un compte</a>
+        <a id="navLogin" href="/login.html">Se connecter</a>
+      </nav>
+    </header>
+
+    <main style="margin-top:26px">
+      <h2>Profils politiques disponibles</h2>
+
+      <table class="card">
+        <thead><tr><th>Nom</th><th>Âge</th><th>Orientation</th><th>Partis</th></tr></thead>
+        <tbody>
+        @foreach(var u in Model.Profiles)
+        {
+            <tr>
+              <td>@(u.FirstName) @(u.LastName)</td>
+              <td>@(u.Age) ans</td>
+              <td>@(string.IsNullOrWhiteSpace(u.PoliticalOrientation) ? "—" : u.PoliticalOrientation)</td>
+              <td>@(u.Parties != null && u.Parties.Count>0 ? string.Join(", ", u.Parties.Select(p => p.Name)) : "—")</td>
+            </tr>
+        }
+        </tbody>
+      </table>
+
+      <div style="margin-top:12px"><a href="/" class="link">Accueil</a></div>
+    </main>
+
+    <footer>
+      <div>© Politicore</div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Créer un compte - Politicore</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style> /* petites adaptations locales */
+    #suggestions{border-radius:8px;background:rgba(255,255,255,0.03);color:var(--muted);max-width:420px;padding:6px;display:none;position:absolute;z-index:20}
+    #message{margin-top:8px;color:#ffb4c3}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="brand" href="/">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-weight:800;color:white">Politicore</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65)">Gestion politique simplifiée</div>
+        </div>
+      </a>
+      <nav>
+        <a href="/parties.html">Partis</a>
+        <a href="/swagger">API</a>
+        <a href="/register.html">Créer un compte</a>
+        <a id="navLogin" href="/login.html">Se connecter</a>
+      </nav>
+    </header>
+
+    <main style="margin-top:26px">
+      <h1>Créer un compte</h1>
+      <form id="registerForm">
+        <label>Prénom<input type="text" id="firstName" required></label>
+        <label>Nom<input type="text" id="lastName" required></label>
+        <label>Date de naissance<input type="date" id="dob" required></label>
+        <label>Orientation politique
+          <div style="display:flex;align-items:center;max-width:420px">
+            <button type="button" id="orientationDec" class="btn btn-ghost" style="width:44px;margin-right:8px">-</button>
+            <input type="text" id="orientation" readonly style="flex:1;margin-right:6px" />
+            <button type="button" id="orientationInc" class="btn btn-ghost" style="width:44px">+</button>
+          </div>
+          <input type="hidden" id="orientationIndex" value="3">
+        </label>
+        <label>Partis (séparés par des virgules)
+          <input type="text" id="parties" autocomplete="off">
+          <div id="suggestions"></div>
+        </label>
+        <div style="margin-top:12px">
+          <button type="submit" class="btn btn-primary">Créer</button>
+          <a class="btn btn-ghost" href="/">Annuler</a>
+        </div>
+      </form>
+      <div id="message"></div>
+    </main>
+
+    <footer>
+      <div>Politicore — Prototype d'administration • Code source disponible sur GitHub</div>
+    </footer>
+  </div>
+
+  <script type="text/javascript">
+    const form = document.getElementById('registerForm');
+    const msg = document.getElementById('message');
+
+    const orientations = ['Extrême gauche','Gauche','Centre-gauche','Centre','Centre-droit','Droite','Extrême droite'];
+    const orientationInput = document.getElementById('orientation');
+    const orientationIndexInput = document.getElementById('orientationIndex');
+    const orientationInc = document.getElementById('orientationInc');
+    const orientationDec = document.getElementById('orientationDec');
+    function updateOrientationDisplay(){ const idx = parseInt(orientationIndexInput.value,10)||0; orientationInput.value = orientations[idx]||orientations[0]; }
+    function changeOrientation(delta){ let idx = parseInt(orientationIndexInput.value,10)||0; idx+=delta; if(idx<0) idx=0; if(idx>=orientations.length) idx=orientations.length-1; orientationIndexInput.value=idx; updateOrientationDisplay(); }
+    orientationInc.addEventListener('click',()=>changeOrientation(1)); orientationDec.addEventListener('click',()=>changeOrientation(-1)); updateOrientationDisplay();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        dateOfBirth: document.getElementById('dob').value,
+        politicalOrientation: document.getElementById('orientation').value.trim(),
+        politicalOrientationIndex: parseInt(document.getElementById('orientationIndex').value, 10),
+        parties: document.getElementById('parties').value.split(',').map(s=>s.trim()).filter(Boolean)
+      };
+      try{
+        const res = await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(!res.ok) throw new Error('Erreur création');
+        const created = await res.json(); msg.textContent='Compte créé. Redirection...'; setTimeout(()=>location.href=`/account.html?id=${created.id}`,800);
+      }catch(err){ console.error(err); msg.textContent='Erreur lors de la création du compte.' }
+    });
+
+    // Autocomplete pour partis
+    const partiesInput = document.getElementById('parties');
+    const suggestionsBox = document.getElementById('suggestions');
+    let debounceTimer = 0;
+    partiesInput.addEventListener('input', ()=>{ clearTimeout(debounceTimer); debounceTimer = setTimeout(()=>fetchSuggestions(),200); });
+    async function fetchSuggestions(){ const val = partiesInput.value; const last = val.split(',').pop().trim(); if(!last){ suggestionsBox.style.display='none'; return; } try{ const res = await fetch(`/api/parties?q=${encodeURIComponent(last)}`); if(!res.ok){ suggestionsBox.style.display='none'; return; } const items = await res.json(); if(!items.length){ suggestionsBox.style.display='none'; return; } suggestionsBox.innerHTML=''; items.forEach(it=>{ const btn = document.createElement('div'); btn.textContent=it.name; btn.style.padding='6px'; btn.style.cursor='pointer'; btn.addEventListener('click', ()=>{ const parts = val.split(',').map(s=>s.trim()).filter(Boolean); parts.pop(); parts.push(it.name); partiesInput.value = parts.join(', ') + ', '; suggestionsBox.style.display='none'; partiesInput.focus(); }); suggestionsBox.appendChild(btn); }); const rect = partiesInput.getBoundingClientRect(); suggestionsBox.style.top = (rect.bottom + window.scrollY) + 'px'; suggestionsBox.style.left = (rect.left + window.scrollX) + 'px'; suggestionsBox.style.display='block'; }catch(e){ suggestionsBox.style.display='none' } }
+    document.addEventListener('click', (ev)=>{ if (!suggestionsBox.contains(ev.target) && ev.target !== partiesInput) suggestionsBox.style.display='none'; });
+  </script>
+  <script>
+    // Affiche le nom de l'utilisateur en haut si un utilisateur est stocké
+    (async function(){
+      try{
+        const id = localStorage.getItem('politicore_userId');
+        if(!id) return;
+        const res = await fetch(`/api/users/${id}`);
+        if(!res.ok) return;
+        const u = await res.json();
+        const navLogin = document.getElementById('navLogin');
+        if(navLogin){ navLogin.textContent = `${u.firstName} ${u.lastName}`; navLogin.href = `/account.html?id=${u.id}`; }
+      }catch(e){}
+    })();
+  </script>
+</body>
+</html>

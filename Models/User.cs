@@ -10,7 +10,8 @@ namespace Politicore.Models
         public string LastName { get; set; } = string.Empty;
         public DateOnly DateOfBirth { get; set; }
         public string PoliticalOrientation { get; set; } = string.Empty;
-        public List<string> Parties { get; set; } = new();
+        // Navigation property for many-to-many relation with Party
+        public ICollection<Party> Parties { get; set; } = new List<Party>();
 
         public int Age => CalculateAge();
 

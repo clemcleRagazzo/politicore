@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profil - Politicore</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .card{padding:18px;border-radius:12px;background:var(--card-bg);max-width:700px}
+    .row{margin:6px 0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="brand" href="/">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-weight:800;color:white">Politicore</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65)">Gestion politique simplifiée</div>
+        </div>
+      </a>
+      <nav>
+        <a href="/parties.html">Partis</a>
+        <a href="/swagger">API</a>
+        <a href="/register.html">Créer un compte</a>
+        <a id="navLogin" href="/login.html">Se connecter</a>
+      </nav>
+    </header>
+
+    <main style="margin-top:26px">
+      <h1>Profil utilisateur</h1>
+      <div id="content">Chargement...</div>
+    </main>
+
+    <footer>
+      <div>Politicore — Prototype d'administration • Code source disponible sur GitHub</div>
+    </footer>
+  </div>
+
+  <script>
+    function getQueryParam(key){ return new URLSearchParams(location.search).get(key); }
+    async function loadProfile(){
+      const id = getQueryParam('id');
+      const content = document.getElementById('content');
+      if (!id) { content.textContent = 'Aucun ID fourni.'; return; }
+      try{
+        const res = await fetch(`/api/users/${id}`);
+        if (res.status === 404) { content.textContent = 'Utilisateur non trouvé.'; return; }
+        if (!res.ok) { content.textContent = 'Erreur lors de la récupération.'; return; }
+        const u = await res.json();
+        content.innerHTML = `
+          <div class="card">
+            <div class="row"><strong style="color:white">${u.firstName} ${u.lastName}</strong> <span style="color:rgba(255,255,255,0.6)">(ID ${u.id})</span></div>
+            <div class="row">Âge: <strong style="color:white">${u.age} ans</strong></div>
+            <div class="row">Date de naissance: ${u.dateOfBirth}</div>
+            <div class="row">Orientation: ${u.politicalOrientation || '-'} </div>
+            <div class="row">Partis: ${u.parties.length ? u.parties.join(', ') : '-'}</div>
+            <div style="margin-top:10px"><a id="logoutLink" class="btn btn-ghost" href="/login.html">Se déconnecter</a> <a class="btn btn-ghost" href="/">Accueil</a></div>
+          </div>`;
+        // Mettre à jour le lien de navigation pour afficher le nom si l'utilisateur est connecté
+        try{
+          const navLogin = document.getElementById('navLogin');
+          if (navLogin) {
+            navLogin.textContent = `${u.firstName} ${u.lastName}`;
+            navLogin.href = `/account.html?id=${u.id}`;
+          }
+        }catch(e){/* ignore */}
+        // Stocker l'utilisateur comme connecté dans localStorage
+        try{ localStorage.setItem('politicore_userId', u.id); }catch(e){}
+        // Attacher handler de déconnexion pour effacer le stockage
+        try{
+          const logout = document.getElementById('logoutLink');
+          if(logout) logout.addEventListener('click', ()=>{ try{ localStorage.removeItem('politicore_userId'); }catch(e){} });
+        }catch(e){}
+      }catch(e){ content.textContent = 'Erreur réseau.'; }
+    }
+    loadProfile();
+  </script>
+</body>
+</html>

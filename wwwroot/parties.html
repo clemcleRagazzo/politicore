@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administration - Partis</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Ajustements légers spécifiques à cette page pour garder l'harmonie */
+    .form-row { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+    .form-row input[type="text"]{ flex:1; padding:8px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:8px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:left; }
+    thead th { color:rgba(255,255,255,0.8); font-weight:600; }
+    .actions button { margin-right:6px; }
+    #message { margin-top:8px; color:#ffb4c3; }
+  </style>
+</head>
+<body>
+  <body>
+  <div class="container">
+    <header>
+      <a class="brand" href="/">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-weight:800;color:white">Politicore</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65)">Gestion politique simplifiée</div>
+        </div>
+      </a>
+      <nav>
+        <a href="/parties.html">Partis</a>
+        <a href="/swagger">API</a>
+        <a href="/register.html">Créer un compte</a>
+        <a id="navLogin" href="/login.html">Se connecter</a>
+      </nav>
+    </header>
+
+    <main style="margin-top:26px">
+      <h2>Trouver votre parti</h2>
+
+      <form id="createForm" class="form-row" aria-label="Créer un parti">
+        <label for="newName" class="visually-hidden">Nom du parti</label>
+        <input id="newName" type="text" placeholder="Nom du parti" required>
+        <button type="submit" class="btn btn-primary">Créer</button>
+      </form>
+
+      <table id="tbl" class="card">
+        <thead><tr><th style="width:5rem">ID</th><th>Nom</th><th style="width:14rem">Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="message" role="status" aria-live="polite"></div>
+      <div style="margin-top:12px"><a href="/" class="link">Accueil</a></div>
+    </main>
+
+    <footer>
+      <div>© Politicore</div>
+    </footer>
+  </div>
+
+  <script>
+    const tblBody = document.querySelector('#tbl tbody');
+    const msg = document.getElementById('message');
+
+    async function load(){
+      msg.textContent = '';
+      try{
+        const res = await fetch('/api/parties');
+        if(!res.ok) throw new Error('network');
+        const items = await res.json();
+        tblBody.innerHTML = '';
+        items.forEach(it => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${it.id}</td>
+            <td data-name>${escapeHtml(it.name)}</td>
+            <td class="actions">
+              <button data-edit class="btn">Editer</button>
+              <button data-delete class="btn btn-outline">Supprimer</button>
+            </td>`;
+          tr.querySelector('[data-edit]').addEventListener('click', ()=>editRow(tr, it));
+          tr.querySelector('[data-delete]').addEventListener('click', ()=>deleteItem(it.id));
+          tblBody.appendChild(tr);
+        });
+      }catch(e){ msg.textContent = 'Erreur chargement'; }
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+
+    document.getElementById('createForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      msg.textContent = '';
+      const name = document.getElementById('newName').value.trim();
+      if(!name) return;
+      try{
+        const res = await fetch('/api/parties', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+        if(res.status===409){ msg.textContent='Le parti existe déjà.'; return; }
+        if(!res.ok) throw new Error('err');
+        document.getElementById('newName').value = '';
+        await load();
+      }catch(e){ msg.textContent='Erreur création'; }
+    });
+
+    async function editRow(tr, item){
+      const td = tr.querySelector('[data-name]');
+      const old = item.name;
+      td.innerHTML = `<input value="${escapeHtml(old)}">`;
+      const input = td.querySelector('input');
+      const actions = tr.querySelector('.actions');
+      actions.innerHTML = '';
+      const save = document.createElement('button'); save.textContent='Sauver'; save.className='btn';
+      const cancel = document.createElement('button'); cancel.textContent='Annuler'; cancel.className='btn btn-outline';
+      actions.appendChild(save); actions.appendChild(cancel);
+      save.addEventListener('click', async ()=>{
+        msg.textContent = '';
+        const name = input.value.trim();
+        if(!name) { msg.textContent='Nom requis'; return; }
+        try{
+          const res = await fetch(`/api/parties/${item.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: item.id, name }) });
+          if(!res.ok) throw new Error('err');
+          await load();
+        }catch(e){ msg.textContent='Erreur mise à jour'; }
+      });
+      cancel.addEventListener('click', ()=>{ load(); });
+    }
+
+    async function deleteItem(id){
+      if(!confirm('Supprimer ce parti ?')) return;
+      try{
+        const res = await fetch(`/api/parties/${id}`, { method:'DELETE' });
+        if(!res.ok) throw new Error('err');
+        await load();
+      }catch(e){ msg.textContent='Erreur suppression'; }
+    }
+
+    load();
+  </script>
+  <script>
+    // Met à jour la nav si un utilisateur est connecté (stocké)
+    (async function(){
+      try{
+        const id = localStorage.getItem('politicore_userId');
+        if(!id) return;
+        const res = await fetch(`/api/users/${id}`);
+        if(!res.ok) return;
+        const u = await res.json();
+        const navLogin = document.getElementById('navLogin');
+        if(navLogin){ navLogin.textContent = `${u.firstName} ${u.lastName}`; navLogin.href = `/account.html?id=${u.id}`; }
+      }catch(e){}
+    })();
+  </script>
+</body>
+</html>

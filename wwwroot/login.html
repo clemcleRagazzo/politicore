@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connexion - Politicore</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style> #message{margin-top:8px;color:#ffb4c3} </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="brand" href="/">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-weight:800;color:white">Politicore</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65)">Gestion politique simplifiée</div>
+        </div>
+      </a>
+      <nav>
+        <a href="/parties.html">Partis</a>
+        <a href="/swagger">API</a>
+        <a href="/register.html">Créer un compte</a>
+        <a id="navLogin" href="/login.html">Se connecter</a>
+      </nav>
+    </header>
+
+    <main style="margin-top:26px">
+      <h1>Se connecter</h1>
+      <p>Choisissez votre compte dans la liste ou entrez l'ID.</p>
+      <div style="max-width:640px">
+        <label>Liste des comptes
+          <select id="usersSelect" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;background-color:transparent;background-image:url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\'><path d=\'M7 10l5 5 5-5\' stroke=\'%23ffffff\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/></svg>');background-repeat:no-repeat;background-position:right 10px center;background-size:16px 16px;padding-right:40px;border:1px solid rgba(255,255,255,0.08);color:var(--muted);"> 
+            <option>Chargement...</option>
+          </select>
+        </label>
+        <div style="margin-top:10px">
+          <button id="btnSelect" class="btn btn-primary">Connexion par sélection</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;max-width:640px">
+        <label>Ou entrer l'ID
+          <input type="number" id="userId" min="1" placeholder="ID utilisateur">
+        </label>
+        <div style="margin-top:8px">
+          <button id="btnId" class="btn btn-ghost">Connexion par ID</button>
+        </div>
+      </div>
+      <div id="message"></div>
+    </main>
+
+    <footer>
+      <div>Politicore — Prototype d'administration • Code source disponible sur GitHub</div>
+    </footer>
+  </div>
+
+  <script>
+    const sel = document.getElementById('usersSelect');
+    const msg = document.getElementById('message');
+
+    async function loadUsers(){
+      try{
+        const res = await fetch('/api/users');
+        const users = await res.json();
+        sel.innerHTML = '';
+        users.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.id;
+          opt.textContent = `${u.id} - ${u.firstName} ${u.lastName} (age ${u.age})`;
+          sel.appendChild(opt);
+        });
+      }catch(e){
+        sel.innerHTML = '<option>Erreur de chargement</option>';
+      }
+    }
+
+    document.getElementById('btnSelect').addEventListener('click', ()=>{
+      const id = sel.value;
+      if (!id) { msg.textContent = 'Sélectionnez un compte.'; return; }
+      try{ localStorage.setItem('politicore_userId', id); }catch(e){}
+      location.href = `/account.html?id=${id}`;
+    });
+
+    document.getElementById('btnId').addEventListener('click', ()=>{
+      const id = document.getElementById('userId').value;
+      if (!id) { msg.textContent = 'Entrez un ID valide.'; return; }
+      try{ localStorage.setItem('politicore_userId', id); }catch(e){}
+      location.href = `/account.html?id=${id}`;
+    });
+
+    loadUsers();
+    // Si un utilisateur est stocké, essayer d'afficher son nom dans la nav
+    (async function(){
+      try{
+        const id = localStorage.getItem('politicore_userId');
+        if(!id) return;
+        const res = await fetch(`/api/users/${id}`);
+        if(!res.ok) return;
+        const u = await res.json();
+        const navLogin = document.getElementById('navLogin');
+        if(navLogin){ navLogin.textContent = `${u.firstName} ${u.lastName}`; navLogin.href = `/account.html?id=${u.id}`; }
+      }catch(e){}
+    })();
+  </script>
+</body>
+</html>
