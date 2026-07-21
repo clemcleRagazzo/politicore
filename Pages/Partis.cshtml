@@ -34,6 +34,41 @@
     <main style="margin-top:26px">
       <h2>Profils politiques disponibles</h2>
 
+      <form method="get" class="card" style="padding:12px;margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+        <div>
+          <label>Âge min</label><br />
+          <input type="number" name="MinAge" value="@(Model.MinAge?.ToString() ?? String.Empty)" min="0" />
+        </div>
+        <div>
+          <label>Âge max</label><br />
+          <input type="number" name="MaxAge" value="@(Model.MaxAge?.ToString() ?? String.Empty)" min="0" />
+        </div>
+        <div>
+          <label>Orientation</label><br />
+          <select name="Orientation">
+            <option value="">Toutes</option>
+            @foreach(var o in Model.AllOrientations)
+            {
+                <option value="@o" @(Model.Orientation == o ? "selected" : "")>@o</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label>Parti</label><br />
+          <select name="PartyId">
+            <option value="">Tous</option>
+            @foreach(var p in Model.AllParties)
+            {
+                <option value="@p.Id" @(Model.PartyId.HasValue && Model.PartyId.Value == p.Id ? "selected" : "")>@p.Name</option>
+            }
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="submit" class="btn">Filtrer</button>
+          <a class="link" href="/Partis">Effacer</a>
+        </div>
+      </form>
+
       <table class="card">
         <thead><tr><th>Nom</th><th>Âge</th><th>Orientation</th><th>Partis</th></tr></thead>
         <tbody>
@@ -55,6 +90,18 @@
     <footer>
       <div>© Politicore</div>
     </footer>
-  </div>
+    </div>
+
+    <script type="text/javascript">
+            try {
+                const id = localStorage.getItem('politicore_userId');
+                if (!id) return;
+                const res = await fetch(`/api/users/${id}`);
+                if (!res.ok) return;
+                const u = await res.json();
+                const navLogin = document.getElementById('navLogin');
+                if (navLogin) { navLogin.textContent = `${u.firstName} ${u.lastName}`; navLogin.href = `/account.html?id=${u.id}`; }
+            } catch (e) { }
+    </script>
 </body>
 </html>

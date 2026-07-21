@@ -2,14 +2,12 @@ using System;
 
 namespace Politicore
 {
-    public class WeatherForecast
+    public record WeatherForecast
     {
-        public DateOnly Date { get; set; }
-
-        public int TemperatureC { get; set; }
+        public DateOnly Date { get; init; }
+        public int TemperatureC { get; init; }
+        public string? Summary { get; init; }
 
         public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-
-        public string? Summary { get; set; }
     }
 }
